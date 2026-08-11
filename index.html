@@ -47,19 +47,28 @@
         .input-area input { flex: 1; }
         .input-area button { padding: 0 22px; border-radius: 12px; border: none; background: #ff2a70; color: white; font-weight: bold; cursor: pointer; }
 
+        /* Incoming Call Ringing Screen */
+        #incoming-call-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); z-index: 200; justify-content: center; align-items: center; flex-direction: column; }
+        .incoming-card { background: #1b0e26; border: 2px solid #ff2a70; padding: 30px 25px; border-radius: 20px; text-align: center; box-shadow: 0 0 25px rgba(255,42,112,0.5); width: 85%; max-width: 320px; animation: pulse 1.5s infinite alternate; }
+        @keyframes pulse { 0% { transform: scale(0.98); box-shadow: 0 0 15px rgba(255,42,112,0.4); } 100% { transform: scale(1.02); box-shadow: 0 0 30px rgba(255,42,112,0.8); } }
+        .caller-avatar { font-size: 3.5rem; margin-bottom: 10px; }
+        .incoming-actions { display: flex; justify-content: space-around; margin-top: 25px; gap: 15px; }
+        .accept-btn { background: #28a745; border: none; padding: 12px 20px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(40,167,69,0.4); }
+        .decline-btn { background: #dc3545; border: none; padding: 12px 20px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(220,53,69,0.4); }
+
         /* Video Call Modal */
         #video-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.94); z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
         .video-wrapper { position: relative; width: 90%; max-width: 400px; height: 68vh; background: #000; border-radius: 20px; overflow: hidden; border: 2px solid #ff2a70; box-shadow: 0 0 25px rgba(255,42,112,0.4); }
         
-        /* SNAPCHAT 'PLEASANT OG' FILTER EFFECT */
+        /* SNAPCHAT 'PLEASANT OG' FILTER */
         .pleasant-og {
-            filter: brightness(1.14) contrast(1.03) saturate(1.25) sepia(0.08) hue-rotate(-8deg) blur(0.2px) !important;
+            filter: brightness(1.18) contrast(0.98) saturate(1.05) blur(0.3px) !important;
             transition: all 0.3s ease;
         }
 
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* LOCAL CAMERA MIRROR FLIP FIX (SHEESHE JAISA CAMERA VIEW) */
+        /* Local Camera Mirror View Fix */
         #local-video { 
             width: 105px; 
             height: 145px; 
@@ -70,12 +79,12 @@
             border-radius: 14px; 
             border: 2px solid #ff2a70; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.6); 
-            transform: scaleX(-1); /* Photo ko sidha/mirror karne ke liye */
+            transform: scaleX(-1); 
         }
         
-        .video-controls { margin-top: 18px; display: flex; gap: 12px; }
-        .filter-toggle-btn { background: #ff2a70; border: none; padding: 10px 18px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: 0.3s; box-shadow: 0 4px 12px rgba(255,42,112,0.4); }
-        .end-call-btn { background: #e60033; border: none; padding: 10px 22px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+        .video-controls { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .control-btn { background: #ff2a70; border: none; padding: 10px 16px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.3s; box-shadow: 0 4px 12px rgba(255,42,112,0.4); }
+        .end-call-btn { background: #e60033; border: none; padding: 10px 20px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -107,6 +116,19 @@
     </div>
 </div>
 
+<!-- Incoming Call Ringing Modal -->
+<div id="incoming-call-modal">
+    <div class="incoming-card">
+        <div class="caller-avatar">💖</div>
+        <h3 id="caller-name-display" style="color: #ff2a70; margin-bottom: 5px;">Someone</h3>
+        <p style="font-size: 0.9rem; color: #ccc;">is calling you for Video Call...</p>
+        <div class="incoming-actions">
+            <button class="accept-btn" onclick="acceptIncomingCall()">Accept 📞</button>
+            <button class="decline-btn" onclick="declineIncomingCall()">Decline ❌</button>
+        </div>
+    </div>
+</div>
+
 <!-- Video Call Overlay -->
 <div id="video-modal">
     <div class="video-wrapper">
@@ -114,7 +136,8 @@
         <video id="local-video" class="pleasant-og" autoplay playsinline muted></video>
     </div>
     <div class="video-controls">
-        <button class="filter-toggle-btn" id="filter-btn" onclick="togglePleasantFilter()">✨ Pleasant OG: ON</button>
+        <button class="control-btn" id="mic-btn" onclick="toggleMic()">🎙️ Mic: ON</button>
+        <button class="control-btn" id="filter-btn" onclick="togglePleasantFilter()">✨ Filter: ON</button>
         <button class="end-call-btn" onclick="endCall()">End Call ❌</button>
     </div>
 </div>
@@ -139,7 +162,10 @@
     let peer = null;
     let localStream = null;
     let currentCall = null;
+    let incomingMediaCall = null;
     let isFilterActive = true;
+    let isMicMuted = false;
+    let pendingCaller = "";
 
     // Background floating hearts
     for(let i=0; i<15; i++){
@@ -242,7 +268,7 @@
 
     function startAutoDeleteTimer(msgId, seenAt) {
         const timerSpan = document.getElementById("timer-" + msgId);
-        
+
         const updateTimer = () => {
             const elapsed = Math.floor((Date.now() - seenAt) / 1000);
             const remaining = 60 - elapsed;
@@ -266,6 +292,19 @@
         }, 1000);
     }
 
+    /* --- MIC TOGGLE --- */
+    function toggleMic() {
+        if (!localStream) return;
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            isMicMuted = !audioTrack.enabled;
+            const micBtn = document.getElementById("mic-btn");
+            micBtn.innerText = isMicMuted ? "🔇 Mic: OFF" : "🎙️ Mic: ON";
+            micBtn.style.background = isMicMuted ? "rgba(255, 255, 255, 0.25)" : "#ff2a70";
+        }
+    }
+
     /* --- SNAPCHAT PLEASANT OG FILTER TOGGLE --- */
     function togglePleasantFilter() {
         isFilterActive = !isFilterActive;
@@ -276,12 +315,12 @@
         if (isFilterActive) {
             remoteVideo.classList.add("pleasant-og");
             localVideo.classList.add("pleasant-og");
-            filterBtn.innerText = "✨ Pleasant OG: ON";
+            filterBtn.innerText = "✨ Filter: ON";
             filterBtn.style.background = "#ff2a70";
         } else {
             remoteVideo.classList.remove("pleasant-og");
             localVideo.classList.remove("pleasant-og");
-            filterBtn.innerText = "✨ Pleasant OG: OFF";
+            filterBtn.innerText = "✨ Filter: OFF";
             filterBtn.style.background = "rgba(255, 255, 255, 0.25)";
         }
     }
@@ -294,20 +333,8 @@
         peer = new Peer(peerId);
 
         peer.on('call', (call) => {
-            if (confirm("📹 Video Call aa rahi hai! Pick karein?")) {
-                navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-                    localStream = stream;
-                    document.getElementById("local-video").srcObject = stream;
-                    document.getElementById("video-modal").style.display = "flex";
-                    
-                    call.answer(stream);
-                    currentCall = call;
-
-                    call.on('stream', (remoteStream) => {
-                        document.getElementById("remote-video").srcObject = remoteStream;
-                    });
-                });
-            }
+            incomingMediaCall = call;
+            showIncomingModal(pendingCaller || "Partner");
         });
     }
 
@@ -319,16 +346,26 @@
 
             db.ref("chat_rooms/" + currentRoom + "/call_signal").set({
                 caller: currentUser,
-                time: Date.now()
+                time: Date.now(),
+                status: "calling"
             });
-        }).catch(err => alert("Camera permission zaroori hai video call ke liye!"));
+        }).catch(err => alert("Camera & Mic permission zaroori hai!"));
     }
 
     function listenForCalls() {
         db.ref("chat_rooms/" + currentRoom + "/call_signal").on("value", (snapshot) => {
             const data = snapshot.val();
-            if (data && data.caller !== currentUser && (Date.now() - data.time < 10000)) {
-                const partnerClean = data.caller.toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (!data) return;
+
+            // Jab koi dusra call kar raha ho
+            if (data.caller !== currentUser && data.status === "calling" && (Date.now() - data.time < 30000)) {
+                pendingCaller = data.caller;
+                showIncomingModal(data.caller);
+            }
+
+            // Jab call accept ho jaye
+            if (data.caller === currentUser && data.status === "accepted") {
+                const partnerClean = data.acceptedBy.toLowerCase().replace(/[^a-z0-9]/g, "");
                 const partnerPeerId = currentRoom + "-" + partnerClean;
 
                 if (localStream) {
@@ -339,17 +376,40 @@
                     });
                 }
             }
+
+            // Jab call end/decline ho jaye
+            if (data.status === "declined" || data.status === "ended") {
+                document.getElementById("incoming-call-modal").style.display = "none";
+            }
         });
     }
 
-    function endCall() {
-        if (currentCall) currentCall.close();
-        if (localStream) localStream.getTracks().forEach(track => track.stop());
-        document.getElementById("video-modal").style.display = "none";
-        db.ref("chat_rooms/" + currentRoom + "/call_signal").remove();
+    function showIncomingModal(callerName) {
+        document.getElementById("caller-name-display").innerText = callerName;
+        document.getElementById("incoming-call-modal").style.display = "flex";
     }
-</script>
 
-</body>
-</html>
+    function acceptIncomingCall() {
+        document.getElementById("incoming-call-modal").style.display = "none";
 
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+            localStream = stream;
+            document.getElementById("local-video").srcObject = stream;
+            document.getElementById("video-modal").style.display = "flex";
+
+            if (incomingMediaCall) {
+                incomingMediaCall.answer(stream);
+                currentCall = incomingMediaCall;
+                incomingMediaCall.on('stream', (remoteStream) => {
+                    document.getElementById("remote-video").srcObject = remoteStream;
+                });
+            }
+
+            db.ref("chat_rooms/" + currentRoom + "/call_signal").update({
+                status: "accepted",
+                acceptedBy: currentUser
+            });
+        }).catch(err => alert("Camera/Mic permission zaroori hai!"));
+    }
+
+    function decl
