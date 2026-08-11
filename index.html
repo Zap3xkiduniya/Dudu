@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Our Secret Love Space 💖</title>
+    <title>Our Secret Space 💖</title>
     <!-- Firebase CDN -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -13,9 +13,9 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
         body { background: #0f0716; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         
-        /* Floating Hearts Animation Background */
+        /* Floating Hearts Background */
         .heart-bg { position: absolute; width: 100%; height: 100%; overflow: hidden; z-index: 0; pointer-events: none; }
-        .heart { position: absolute; color: rgba(255, 42, 112, 0.2); font-size: 20px; animation: float 6s infinite ease-in; }
+        .heart { position: absolute; color: rgba(255, 42, 112, 0.25); font-size: 20px; animation: float 6s infinite ease-in; }
         @keyframes float { 0% { transform: translateY(100vh) scale(0.5); opacity: 1; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
 
         .card { background: rgba(27, 14, 38, 0.9); width: 100%; max-width: 420px; height: 92vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(255, 42, 112, 0.25); border: 1px solid rgba(255, 42, 112, 0.2); z-index: 1; backdrop-filter: blur(10px); }
@@ -47,13 +47,35 @@
         .input-area input { flex: 1; }
         .input-area button { padding: 0 22px; border-radius: 12px; border: none; background: #ff2a70; color: white; font-weight: bold; cursor: pointer; }
 
-        /* Video Modal */
-        #video-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.92); z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
-        .video-wrapper { position: relative; width: 90%; max-width: 400px; height: 70vh; background: #000; border-radius: 20px; overflow: hidden; border: 2px solid #ff2a70; }
+        /* Video Call Modal */
+        #video-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.94); z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
+        .video-wrapper { position: relative; width: 90%; max-width: 400px; height: 68vh; background: #000; border-radius: 20px; overflow: hidden; border: 2px solid #ff2a70; box-shadow: 0 0 25px rgba(255,42,112,0.4); }
+        
+        /* SNAPCHAT 'PLEASANT OG' FILTER EFFECT */
+        .pleasant-og {
+            filter: brightness(1.14) contrast(1.03) saturate(1.25) sepia(0.08) hue-rotate(-8deg) blur(0.2px) !important;
+            transition: all 0.3s ease;
+        }
+
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { width: 100px; height: 140px; object-fit: cover; position: absolute; bottom: 15px; right: 15px; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .video-controls { margin-top: 20px; display: flex; gap: 20px; }
-        .end-call-btn { background: #ff003c; border: none; padding: 12px 25px; color: white; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        
+        /* LOCAL CAMERA MIRROR FLIP FIX (SHEESHE JAISA CAMERA VIEW) */
+        #local-video { 
+            width: 105px; 
+            height: 145px; 
+            object-fit: cover; 
+            position: absolute; 
+            bottom: 15px; 
+            right: 15px; 
+            border-radius: 14px; 
+            border: 2px solid #ff2a70; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6); 
+            transform: scaleX(-1); /* Photo ko sidha/mirror karne ke liye */
+        }
+        
+        .video-controls { margin-top: 18px; display: flex; gap: 12px; }
+        .filter-toggle-btn { background: #ff2a70; border: none; padding: 10px 18px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: 0.3s; box-shadow: 0 4px 12px rgba(255,42,112,0.4); }
+        .end-call-btn { background: #e60033; border: none; padding: 10px 22px; color: white; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -88,16 +110,17 @@
 <!-- Video Call Overlay -->
 <div id="video-modal">
     <div class="video-wrapper">
-        <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay playsinline muted></video>
+        <video id="remote-video" class="pleasant-og" autoplay playsinline></video>
+        <video id="local-video" class="pleasant-og" autoplay playsinline muted></video>
     </div>
     <div class="video-controls">
+        <button class="filter-toggle-btn" id="filter-btn" onclick="togglePleasantFilter()">✨ Pleasant OG: ON</button>
         <button class="end-call-btn" onclick="endCall()">End Call ❌</button>
     </div>
 </div>
 
 <script>
-    // Firebase Config
+    // Zap3x Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyBY8NNSdWPwP8790my8KlpestQD8qDkqhw",
         authDomain: "zap3x-6655f.firebaseapp.com",
@@ -116,6 +139,7 @@
     let peer = null;
     let localStream = null;
     let currentCall = null;
+    let isFilterActive = true;
 
     // Background floating hearts
     for(let i=0; i<15; i++){
@@ -171,7 +195,6 @@
         const container = document.getElementById("messages-container");
         const messagesRef = db.ref("chat_rooms/" + currentRoom + "/messages");
 
-        // Message add listener
         messagesRef.on("child_added", (snapshot) => {
             const data = snapshot.val();
             const msgId = snapshot.key;
@@ -194,18 +217,15 @@
                 container.scrollTop = container.scrollHeight;
             }
 
-            // Agar message saamne wale ne dekha hai (Received message) -> Mark as Seen
             if (data.sender !== currentUser && !data.seen) {
                 messagesRef.child(msgId).update({ seen: true, seenAt: Date.now() });
             }
 
-            // Auto-delete Timer logic (1 min after Seen)
             if (data.seen && data.seenAt) {
                 startAutoDeleteTimer(msgId, data.seenAt);
             }
         });
 
-        // Message change listener (Jab seen update ho)
         messagesRef.on("child_changed", (snapshot) => {
             const data = snapshot.val();
             const msgId = snapshot.key;
@@ -214,7 +234,6 @@
             }
         });
 
-        // Message delete from UI
         messagesRef.on("child_removed", (snapshot) => {
             const msgDiv = document.getElementById("msg-" + snapshot.key);
             if (msgDiv) msgDiv.remove();
@@ -223,6 +242,7 @@
 
     function startAutoDeleteTimer(msgId, seenAt) {
         const timerSpan = document.getElementById("timer-" + msgId);
+        
         const updateTimer = () => {
             const elapsed = Math.floor((Date.now() - seenAt) / 1000);
             const remaining = 60 - elapsed;
@@ -246,7 +266,27 @@
         }, 1000);
     }
 
-    /* --- VIDEO CALL SYSTEM (PeerJS) --- */
+    /* --- SNAPCHAT PLEASANT OG FILTER TOGGLE --- */
+    function togglePleasantFilter() {
+        isFilterActive = !isFilterActive;
+        const remoteVideo = document.getElementById("remote-video");
+        const localVideo = document.getElementById("local-video");
+        const filterBtn = document.getElementById("filter-btn");
+
+        if (isFilterActive) {
+            remoteVideo.classList.add("pleasant-og");
+            localVideo.classList.add("pleasant-og");
+            filterBtn.innerText = "✨ Pleasant OG: ON";
+            filterBtn.style.background = "#ff2a70";
+        } else {
+            remoteVideo.classList.remove("pleasant-og");
+            localVideo.classList.remove("pleasant-og");
+            filterBtn.innerText = "✨ Pleasant OG: OFF";
+            filterBtn.style.background = "rgba(255, 255, 255, 0.25)";
+        }
+    }
+
+    /* --- VIDEO CALL SYSTEM --- */
     function initPeerJS() {
         const cleanName = currentUser.toLowerCase().replace(/[^a-z0-9]/g, "");
         const peerId = currentRoom + "-" + cleanName;
