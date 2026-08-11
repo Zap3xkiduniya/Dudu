@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Chat</title>
+    <!-- Firebase CDN Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #121212; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        .card { background: #1e1e1e; width: 100%; max-width: 400px; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .header { background: #ff4b72; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; }
+        
+        /* Join Screen */
+        #join-screen { padding: 30px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #2a2a2a; color: #fff; font-size: 1rem; outline: none; }
+        button { padding: 12px; border-radius: 8px; border: none; background: #ff4b72; color: white; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #e03e61; }
+
+        /* Chat Screen */
+        #chat-screen { display: none; flex-direction: column; height: 100%; }
+        #messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        
+        .message { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 0.95rem; word-wrap: break-word; }
+        .sent { background: #ff4b72; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .received { background: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .sender-name { font-size: 0.75rem; color: #bbb; margin-bottom: 3px; }
+
+        .input-area { display: flex; padding: 10px; background: #181818; gap: 8px; }
+        .input-area input { flex: 1; }
+        .input-area button { width: auto; padding: 0 20px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header" id="room-header">Private Chat Room</div>
+
+    <!-- Join Screen -->
+    <div id="join-screen">
+        <h2 style="text-align: center; font-size: 1.4rem;">Chat Join Karein</h2>
+        <input type="text" id="username-input" placeholder="Aapka Naam">
+        <input type="text" id="room-input" placeholder="Secret Room Code (e.g. love123)">
+        <button onclick="joinRoom()">Start Chat</button>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen">
+        <div id="messages-container"></div>
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Apni Firebase Config yahan paste karein
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentUser = "";
+    let currentRoom = "";
+
+    function joinRoom() {
+        const name = document.getElementById("username-input").value.trim();
+        const room = document.getElementById("room-input").value.trim();
+
+        if (!name || !room) {
+            alert("Kripya Naam aur Room Code dono dalein!");
+            return;
+        }
+
+        currentUser = name;
+        currentRoom = room.toLowerCase();
+
+        document.getElementById("join-screen").style.display = "none";
+        document.getElementById("chat-screen").style.display = "flex";
+        document.getElementById("room-header").innerText = "Room: " + currentRoom;
+
+        listenForMessages();
+    }
+
+    function sendMessage() {
+        const input = document.getElementById("message-input");
+        const messageText = input.value.trim();
+
+        if (!messageText) return;
+
+        const messageData = {
+            sender: currentUser,
+            text: messageText,
+            timestamp: Date.now()
+        };
+
+        // Database me message push karna
+        db.ref("chat_rooms/" + currentRoom).push(messageData);
+        input.value = "";
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') sendMessage();
+    }
+
+    function listenForMessages() {
+        const container = document.getElementById("messages-container");
+        
+        // Real-time listener
+        db.ref("chat_rooms/" + currentRoom).on("child_added", (snapshot) => {
+            const data = snapshot.val();
+            const msgDiv = document.createElement("div");
+            
+            const isSelf = data.sender === currentUser;
+            msgDiv.className = `message ${isSelf ? 'sent' : 'received'}`;
+            
+            msgDiv.innerHTML = `
+                ${!isSelf ? `<div class="sender-name">${data.sender}</div>` : ''}
+                <div>${data.text}</div>
+            `;
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        });
+    }
+</script>
+
+</body>
+</html>
