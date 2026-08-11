@@ -3,62 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Chat</title>
-    <!-- Firebase CDN Scripts -->
+    <title>Our Secret Love Space 💖</title>
+    <!-- Firebase CDN -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- PeerJS for Video Call -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #121212; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background: #0f0716; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         
-        .card { background: #1e1e1e; width: 100%; max-width: 400px; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        .header { background: #ff4b72; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; }
-        
+        /* Floating Hearts Animation Background */
+        .heart-bg { position: absolute; width: 100%; height: 100%; overflow: hidden; z-index: 0; pointer-events: none; }
+        .heart { position: absolute; color: rgba(255, 42, 112, 0.2); font-size: 20px; animation: float 6s infinite ease-in; }
+        @keyframes float { 0% { transform: translateY(100vh) scale(0.5); opacity: 1; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+
+        .card { background: rgba(27, 14, 38, 0.9); width: 100%; max-width: 420px; height: 92vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(255, 42, 112, 0.25); border: 1px solid rgba(255, 42, 112, 0.2); z-index: 1; backdrop-filter: blur(10px); }
+        .header { background: linear-gradient(135deg, #ff2a70, #9a0043); padding: 15px 20px; text-align: center; font-weight: bold; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .call-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: 0.3s; display: none; align-items: center; gap: 5px; }
+        .call-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.05); }
+
         /* Join Screen */
-        #join-screen { padding: 30px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
-        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #2a2a2a; color: #fff; font-size: 1rem; outline: none; }
-        button { padding: 12px; border-radius: 8px; border: none; background: #ff4b72; color: white; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #e03e61; }
+        #join-screen { padding: 40px 25px; display: flex; flex-direction: column; gap: 18px; justify-content: center; height: 100%; text-align: center; }
+        .title { font-size: 1.6rem; color: #ff2a70; font-weight: 700; text-shadow: 0 0 10px rgba(255,42,112,0.5); }
+        input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255,42,112,0.3); background: rgba(255, 255, 255, 0.05); color: #fff; font-size: 1rem; outline: none; transition: 0.3s; }
+        input:focus { border-color: #ff2a70; box-shadow: 0 0 10px rgba(255,42,112,0.4); }
+        button.action-btn { padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #ff2a70, #d11149); color: white; font-weight: bold; font-size: 1.05rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(255,42,112,0.4); }
+        button.action-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,42,112,0.6); }
 
         /* Chat Screen */
         #chat-screen { display: none; flex-direction: column; height: 100%; }
-        #messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        #messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
         
-        .message { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 0.95rem; word-wrap: break-word; }
-        .sent { background: #ff4b72; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .received { background: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .sender-name { font-size: 0.75rem; color: #bbb; margin-bottom: 3px; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; word-wrap: break-word; position: relative; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .sent { background: linear-gradient(135deg, #ff2a70, #c4004f); align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(255,42,112,0.3); }
+        .received { background: #281738; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255, 42, 112, 0.2); }
+        .sender-name { font-size: 0.7rem; color: #ff85ad; margin-bottom: 4px; font-weight: 600; }
+        .msg-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; font-size: 0.65rem; opacity: 0.8; }
 
-        .input-area { display: flex; padding: 10px; background: #181818; gap: 8px; }
+        .input-area { display: flex; padding: 12px; background: rgba(15, 7, 22, 0.95); gap: 10px; border-top: 1px solid rgba(255, 42, 112, 0.2); }
         .input-area input { flex: 1; }
-        .input-area button { width: auto; padding: 0 20px; }
+        .input-area button { padding: 0 22px; border-radius: 12px; border: none; background: #ff2a70; color: white; font-weight: bold; cursor: pointer; }
+
+        /* Video Modal */
+        #video-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.92); z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
+        .video-wrapper { position: relative; width: 90%; max-width: 400px; height: 70vh; background: #000; border-radius: 20px; overflow: hidden; border: 2px solid #ff2a70; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { width: 100px; height: 140px; object-fit: cover; position: absolute; bottom: 15px; right: 15px; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .video-controls { margin-top: 20px; display: flex; gap: 20px; }
+        .end-call-btn { background: #ff003c; border: none; padding: 12px 25px; color: white; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 1rem; }
     </style>
 </head>
 <body>
 
+<div class="heart-bg" id="hearts"></div>
+
 <div class="card">
-    <div class="header" id="room-header">Private Chat Room</div>
+    <div class="header">
+        <span id="room-header">💖 Secret Space</span>
+        <button class="call-btn" id="call-btn" onclick="startCall()">📹 Call</button>
+    </div>
 
     <!-- Join Screen -->
     <div id="join-screen">
-        <h2 style="text-align: center; font-size: 1.4rem;">Chat Join Karein</h2>
-        <input type="text" id="username-input" placeholder="Aapka Naam">
-        <input type="text" id="room-input" placeholder="Secret Room Code (e.g. love123)">
-        <button onclick="joinRoom()">Start Chat</button>
+        <div class="title">Our Love Corner 👩‍❤️‍👨</div>
+        <p style="font-size: 0.85rem; color: #bbb;">Bina kisi login ke apni secret dunia me aao!</p>
+        <input type="text" id="username-input" placeholder="Aapka Pyara Naam ❤️">
+        <input type="text" id="room-input" placeholder="Secret Room Code (e.g. love2026)">
+        <button class="action-btn" onclick="joinRoom()">Enter Secret World ✨</button>
     </div>
 
     <!-- Chat Screen -->
     <div id="chat-screen">
         <div id="messages-container"></div>
         <div class="input-area">
-            <input type="text" id="message-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Send</button>
+            <input type="text" id="message-input" placeholder="Type a cute message..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send 💕</button>
         </div>
     </div>
 </div>
 
+<!-- Video Call Overlay -->
+<div id="video-modal">
+    <div class="video-wrapper">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+    </div>
+    <div class="video-controls">
+        <button class="end-call-btn" onclick="endCall()">End Call ❌</button>
+    </div>
+</div>
+
 <script>
-    // Zap3x Firebase Project Config
+    // Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyBY8NNSdWPwP8790my8KlpestQD8qDkqhw",
         authDomain: "zap3x-6655f.firebaseapp.com",
@@ -69,72 +108,205 @@
         appId: "1:132164789124:web:7eac2f0028324ac06b3d1"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     let currentUser = "";
     let currentRoom = "";
+    let peer = null;
+    let localStream = null;
+    let currentCall = null;
+
+    // Background floating hearts
+    for(let i=0; i<15; i++){
+        let heart = document.createElement('div');
+        heart.className = 'heart';
+        heart.innerHTML = '❤️';
+        heart.style.left = Math.random() * 100 + 'vw';
+        heart.style.animationDelay = Math.random() * 5 + 's';
+        heart.style.fontSize = (Math.random() * 15 + 15) + 'px';
+        document.getElementById('hearts').appendChild(heart);
+    }
 
     function joinRoom() {
         const name = document.getElementById("username-input").value.trim();
         const room = document.getElementById("room-input").value.trim();
 
         if (!name || !room) {
-            alert("Kripya Naam aur Room Code dono dalein!");
+            alert("Pehle apna Naam aur Secret Code toh dalein! 😉");
             return;
         }
 
         currentUser = name;
-        currentRoom = room.toLowerCase();
+        currentRoom = room.toLowerCase().replace(/[^a-z0-9]/g, "");
 
         document.getElementById("join-screen").style.display = "none";
         document.getElementById("chat-screen").style.display = "flex";
-        document.getElementById("room-header").innerText = "Room: " + currentRoom;
+        document.getElementById("call-btn").style.display = "flex";
+        document.getElementById("room-header").innerText = "💖 " + currentRoom;
 
         listenForMessages();
+        initPeerJS();
+        listenForCalls();
     }
 
     function sendMessage() {
         const input = document.getElementById("message-input");
         const messageText = input.value.trim();
-
         if (!messageText) return;
 
-        const messageData = {
+        const msgRef = db.ref("chat_rooms/" + currentRoom + "/messages").push();
+        msgRef.set({
             sender: currentUser,
             text: messageText,
-            timestamp: Date.now()
-        };
-
-        // Database me message push karna
-        db.ref("chat_rooms/" + currentRoom).push(messageData);
+            timestamp: Date.now(),
+            seen: false
+        });
         input.value = "";
     }
 
-    function handleKeyPress(e) {
-        if (e.key === 'Enter') sendMessage();
-    }
+    function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
 
     function listenForMessages() {
         const container = document.getElementById("messages-container");
-        
-        // Real-time listener
-        db.ref("chat_rooms/" + currentRoom).on("child_added", (snapshot) => {
-            const data = snapshot.val();
-            const msgDiv = document.createElement("div");
-            
-            const isSelf = data.sender === currentUser;
-            msgDiv.className = `message ${isSelf ? 'sent' : 'received'}`;
-            
-            msgDiv.innerHTML = `
-                ${!isSelf ? `<div class="sender-name">${data.sender}</div>` : ''}
-                <div>${data.text}</div>
-            `;
+        const messagesRef = db.ref("chat_rooms/" + currentRoom + "/messages");
 
-            container.appendChild(msgDiv);
-            container.scrollTop = container.scrollHeight;
+        // Message add listener
+        messagesRef.on("child_added", (snapshot) => {
+            const data = snapshot.val();
+            const msgId = snapshot.key;
+
+            let msgDiv = document.getElementById("msg-" + msgId);
+            if (!msgDiv) {
+                msgDiv = document.createElement("div");
+                msgDiv.id = "msg-" + msgId;
+                const isSelf = data.sender === currentUser;
+                msgDiv.className = `message ${isSelf ? 'sent' : 'received'}`;
+                
+                msgDiv.innerHTML = `
+                    ${!isSelf ? `<div class="sender-name">${data.sender}</div>` : ''}
+                    <div>${data.text}</div>
+                    <div class="msg-footer">
+                        <span id="timer-${msgId}">${data.seen ? '🔥 1m' : '✔'}</span>
+                    </div>
+                `;
+                container.appendChild(msgDiv);
+                container.scrollTop = container.scrollHeight;
+            }
+
+            // Agar message saamne wale ne dekha hai (Received message) -> Mark as Seen
+            if (data.sender !== currentUser && !data.seen) {
+                messagesRef.child(msgId).update({ seen: true, seenAt: Date.now() });
+            }
+
+            // Auto-delete Timer logic (1 min after Seen)
+            if (data.seen && data.seenAt) {
+                startAutoDeleteTimer(msgId, data.seenAt);
+            }
         });
+
+        // Message change listener (Jab seen update ho)
+        messagesRef.on("child_changed", (snapshot) => {
+            const data = snapshot.val();
+            const msgId = snapshot.key;
+            if (data.seen && data.seenAt) {
+                startAutoDeleteTimer(msgId, data.seenAt);
+            }
+        });
+
+        // Message delete from UI
+        messagesRef.on("child_removed", (snapshot) => {
+            const msgDiv = document.getElementById("msg-" + snapshot.key);
+            if (msgDiv) msgDiv.remove();
+        });
+    }
+
+    function startAutoDeleteTimer(msgId, seenAt) {
+        const timerSpan = document.getElementById("timer-" + msgId);
+        const updateTimer = () => {
+            const elapsed = Math.floor((Date.now() - seenAt) / 1000);
+            const remaining = 60 - elapsed;
+
+            if (remaining <= 0) {
+                db.ref("chat_rooms/" + currentRoom + "/messages/" + msgId).remove();
+            } else {
+                if (timerSpan) timerSpan.innerText = `🔥 ${remaining}s`;
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - seenAt) / 1000);
+            if (60 - elapsed <= 0) {
+                clearInterval(interval);
+                db.ref("chat_rooms/" + currentRoom + "/messages/" + msgId).remove();
+            } else {
+                if (timerSpan) timerSpan.innerText = `🔥 ${60 - elapsed}s`;
+            }
+        }, 1000);
+    }
+
+    /* --- VIDEO CALL SYSTEM (PeerJS) --- */
+    function initPeerJS() {
+        const cleanName = currentUser.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const peerId = currentRoom + "-" + cleanName;
+        
+        peer = new Peer(peerId);
+
+        peer.on('call', (call) => {
+            if (confirm("📹 Video Call aa rahi hai! Pick karein?")) {
+                navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+                    localStream = stream;
+                    document.getElementById("local-video").srcObject = stream;
+                    document.getElementById("video-modal").style.display = "flex";
+                    
+                    call.answer(stream);
+                    currentCall = call;
+
+                    call.on('stream', (remoteStream) => {
+                        document.getElementById("remote-video").srcObject = remoteStream;
+                    });
+                });
+            }
+        });
+    }
+
+    function startCall() {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+            localStream = stream;
+            document.getElementById("local-video").srcObject = stream;
+            document.getElementById("video-modal").style.display = "flex";
+
+            db.ref("chat_rooms/" + currentRoom + "/call_signal").set({
+                caller: currentUser,
+                time: Date.now()
+            });
+        }).catch(err => alert("Camera permission zaroori hai video call ke liye!"));
+    }
+
+    function listenForCalls() {
+        db.ref("chat_rooms/" + currentRoom + "/call_signal").on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.caller !== currentUser && (Date.now() - data.time < 10000)) {
+                const partnerClean = data.caller.toLowerCase().replace(/[^a-z0-9]/g, "");
+                const partnerPeerId = currentRoom + "-" + partnerClean;
+
+                if (localStream) {
+                    const call = peer.call(partnerPeerId, localStream);
+                    currentCall = call;
+                    call.on('stream', (remoteStream) => {
+                        document.getElementById("remote-video").srcObject = remoteStream;
+                    });
+                }
+            }
+        });
+    }
+
+    function endCall() {
+        if (currentCall) currentCall.close();
+        if (localStream) localStream.getTracks().forEach(track => track.stop());
+        document.getElementById("video-modal").style.display = "none";
+        db.ref("chat_rooms/" + currentRoom + "/call_signal").remove();
     }
 </script>
 
