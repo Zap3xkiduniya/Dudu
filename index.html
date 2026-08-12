@@ -178,26 +178,39 @@
         document.getElementById('hearts').appendChild(heart);
     }
 
-    function joinRoom() {
-        const name = document.getElementById("username-input").value.trim();
-        const room = document.getElementById("room-input").value.trim();
-
-        if (!name || !room) {
-            alert("Pehle apna Naam aur Secret Code toh dalein! 😉");
-            return;
+    // Helper: Safe ID Generator for PeerJS / Firebase Paths
+    function makeSafeKey(text) {
+        let clean = text.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!clean) {
+            clean = "id_" + Math.floor(Math.random() * 100000);
         }
+        return clean;
+    }
 
-        currentUser = name;
-        currentRoom = room.toLowerCase().replace(/[^a-z0-9]/g, "");
+    function joinRoom() {
+        try {
+            const name = document.getElementById("username-input").value.trim();
+            const room = document.getElementById("room-input").value.trim();
 
-        document.getElementById("join-screen").style.display = "none";
-        document.getElementById("chat-screen").style.display = "flex";
-        document.getElementById("call-btn").style.display = "flex";
-        document.getElementById("room-header").innerText = "💖 " + currentRoom;
+            if (!name || !room) {
+                alert("Pehle apna Naam aur Secret Code toh dalein! 😉");
+                return;
+            }
 
-        listenForMessages();
-        initPeerJS();
-        listenForCalls();
+            currentUser = name;
+            currentRoom = makeSafeKey(room);
+
+            document.getElementById("join-screen").style.display = "none";
+            document.getElementById("chat-screen").style.display = "flex";
+            document.getElementById("call-btn").style.display = "flex";
+            document.getElementById("room-header").innerText = "💖 " + room;
+
+            listenForMessages();
+            initPeerJS();
+            listenForCalls();
+        } catch (err) {
+            alert("Room join karne me error aaya: " + err.message);
+        }
     }
 
     function sendMessage() {
@@ -327,15 +340,25 @@
 
     /* --- VIDEO CALL SYSTEM --- */
     function initPeerJS() {
-        const cleanName = currentUser.toLowerCase().replace(/[^a-z0-9]/g, "");
-        const peerId = currentRoom + "-" + cleanName;
-        
-        peer = new Peer(peerId);
+        try {
+            const cleanName = makeSafeKey(currentUser);
+            const peerId = currentRoom + "-" + cleanName;
+            
+            if (typeof Peer !== 'undefined') {
+                peer = new Peer(peerId);
 
-        peer.on('call', (call) => {
-            incomingMediaCall = call;
-            showIncomingModal(pendingCaller || "Partner");
-        });
+                peer.on('call', (call) => {
+                    incomingMediaCall = call;
+                    showIncomingModal(pendingCaller || "Partner");
+                });
+
+                peer.on('error', (err) => {
+                    console.log("PeerJS non-fatal error:", err);
+                });
+            }
+        } catch (e) {
+            console.log("PeerJS Init exception:", e);
+        }
     }
 
     function startCall() {
@@ -357,18 +380,16 @@
             const data = snapshot.val();
             if (!data) return;
 
-            // Jab koi dusra call kar raha ho
             if (data.caller !== currentUser && data.status === "calling" && (Date.now() - data.time < 30000)) {
                 pendingCaller = data.caller;
                 showIncomingModal(data.caller);
             }
 
-            // Jab call accept ho jaye
             if (data.caller === currentUser && data.status === "accepted") {
-                const partnerClean = data.acceptedBy.toLowerCase().replace(/[^a-z0-9]/g, "");
+                const partnerClean = makeSafeKey(data.acceptedBy);
                 const partnerPeerId = currentRoom + "-" + partnerClean;
 
-                if (localStream) {
+                if (localStream && peer) {
                     const call = peer.call(partnerPeerId, localStream);
                     currentCall = call;
                     call.on('stream', (remoteStream) => {
@@ -377,7 +398,6 @@
                 }
             }
 
-            // Jab call end/decline ho jaye
             if (data.status === "declined" || data.status === "ended") {
                 document.getElementById("incoming-call-modal").style.display = "none";
             }
@@ -412,4 +432,25 @@
         }).catch(err => alert("Camera/Mic permission zaroori hai!"));
     }
 
-    function decl
+    function declineIncomingCall() {
+        document.getElementById("incoming-call-modal").style.display = "none";
+        db.ref("chat_rooms/" + currentRoom + "/call_signal").update({
+            status: "declined"
+        });
+        if (incomingMediaCall) incomingMediaCall.close();
+    }
+
+    function endCall() {
+        if (currentCall) currentCall.close();
+        if (localStream) localStream.getTracks().forEach(track => track.stop());
+        document.getElementById("video-modal").style.display = "none";
+        document.getElementById("incoming-call-modal").style.display = "none";
+        
+        db.ref("chat_rooms/" + currentRoom + "/call_signal").update({
+            status: "ended"
+        });
+    }
+</script>
+
+</body>
+</html>
